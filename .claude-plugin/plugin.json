@@ -15,30 +15,5 @@
     "claude-code",
     "scaffolding",
     "plugins"
-  ],
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/pre-session.sh",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "Before ending this session, update .claude/status.md with a brief summary: what was done, what's next, any blockers. Set 'Last updated' to today's date. If task statuses changed, update .claude/tasks.md. If new files or directories were created, update .claude/filemap.md."
-          }
-        ]
-      }
-    ]
-  }
+  ]
 }

@@ -1,12 +1,12 @@
 {
+  "description": "Claude Autopilot session hooks for project status tracking",
   "hooks": {
     "SessionStart": [
       {
-        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/pre-session.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-session.sh",
             "timeout": 10
           }
         ]
@@ -14,7 +14,6 @@
     ],
     "Stop": [
       {
-        "matcher": ".*",
         "hooks": [
           {
             "type": "prompt",
