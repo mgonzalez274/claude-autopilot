@@ -6,10 +6,7 @@
     "name": "Corsox",
     "url": "https://github.com/Corsox-Tech"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Corsox-Tech/claude-autopilot.git"
-  },
+  "repository": "https://github.com/mgonzalez274/claude-autopilot",
   "license": "MIT",
   "keywords": [
     "project-init",
