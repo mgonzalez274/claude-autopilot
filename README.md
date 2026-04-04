@@ -1,5 +1,5 @@
 # claude-autopilot
-> v1.2.0
+> v1.2.1
 
 Project scaffolding, auditing, and intelligent tool discovery for Claude Code.
 

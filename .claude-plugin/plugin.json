@@ -1,19 +1,30 @@
 {
   "name": "claude-autopilot",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Project scaffolding, auditing, and intelligent tool discovery for Claude Code. Generates router-pattern CLAUDE.md files, detects instruction contradictions, and recommends tools across 7 categories.",
   "author": {
     "name": "Corsox",
     "url": "https://github.com/Corsox-Tech"
   },
-  "repository": "https://github.com/mgonzalez274/claude-autopilot",
+  "repository": "https://github.com/Corsox-Tech/claude-autopilot",
   "license": "MIT",
   "keywords": [
     "project-init",
     "project-audit",
     "tool-discovery",
     "claude-code",
+    "claude-md",
     "scaffolding",
-    "plugins"
-  ]
+    "plugins",
+    "audit",
+    "mcp",
+    "context-optimization",
+    "rules",
+    "contradiction-detection"
+  ],
+  "skill_versions": {
+    "project-init": "3.0",
+    "project-audit": "3.1",
+    "project-plugins": "4.1"
+  }
 }
