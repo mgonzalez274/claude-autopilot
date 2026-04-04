@@ -1,6 +1,8 @@
 # Tool Registry Schema
-> Version: 2.0
-> **Reference copy** -- The live registry is at `Corsox-Tech/claude-tool-registry/registry.json` (103+ entries). This file documents the schema for reference. It is NOT read during skill execution.
+> Version: 2.1
+> **Reference copy** -- The live registry is at `Corsox-Tech/claude-tool-registry/registry.json`. This file documents the schema for reference. It is NOT read during skill execution. To get the current entry count, read `registry.json` directly.
+>
+> **Sync warning**: This file may lag behind the live registry schema. Before adding entries, verify the current schema by reading an existing entry from `registry.json` directly. If a field exists in the live registry but not in this doc, the live registry is authoritative.
 
 ## Purpose
 This document defines the schema for `registry.json` -- the curated tool registry that the project-plugins skill uses as its primary discovery source before web search.

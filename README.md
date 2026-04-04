@@ -41,7 +41,7 @@ Everything else lives in dedicated files under `.claude/`. Claude reads only wha
 
 **project-plugins** -- Discover tools across 7 categories, not just MCP servers.
 - MCP servers, direct APIs, CLI tools, npm/pip packages, Claude Code features, skills, and plugins
-- Curated registry (103+ pre-vetted entries) checked first, web search fills gaps
+- Curated registry of pre-vetted entries checked first, web search fills gaps
 - Context cost estimation with 20% threshold warning
 - Compatibility checking: Node version, OS, conflicts, plan tier
 - Structured installation verification with pass/fail report
@@ -129,7 +129,7 @@ These aren't required to install or use the core skills, but enable additional f
 | Internet access | `/plugins` web search for tools | Registry-only if `gh` available, or manual recommendations |
 | Git | `/audit` freshness checks, `/init` git recommendations | Hooks skip staleness checks; init omits git-specific advice |
 
-> **Note**: The curated registry (103+ entries) lives in a separate repo ([Corsox-Tech/claude-tool-registry](https://github.com/Corsox-Tech/claude-tool-registry)) and is fetched on demand -- it is not bundled with this plugin.
+> **Note**: The curated registry lives in a separate repo ([Corsox-Tech/claude-tool-registry](https://github.com/Corsox-Tech/claude-tool-registry)) and is fetched on demand -- it is not bundled with this plugin.
 
 ## Platform Notes
 

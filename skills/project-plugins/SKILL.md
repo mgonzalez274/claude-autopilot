@@ -1,5 +1,5 @@
 # Skill: project-plugins
-> Version: 4.1
+> Version: 4.2
 
 ## Purpose
 Discover, evaluate, and recommend tools across 7 categories -- MCP servers, direct APIs, CLI tools, npm/pip packages, Claude Code features, standalone skills, and plugins -- for a project. Uses web search to get current information -- never relies solely on training data.
@@ -15,7 +15,7 @@ Discover, evaluate, and recommend tools across 7 categories -- MCP servers, dire
 ---
 
 ## Curated Registry
-This skill uses a curated tool registry at `Corsox-Tech/claude-tool-registry` (103+ entries) as its **primary** discovery source (Step 2a), with web search (Step 2b) only for gaps not covered by the registry. The registry contains pre-vetted entries with safety ratings, overlap detection, and MCP scope documentation.
+This skill uses a curated tool registry at `Corsox-Tech/claude-tool-registry` as its **primary** discovery source (Step 2a), with web search (Step 2b) only for gaps not covered by the registry. The registry contains pre-vetted entries with safety ratings, overlap detection, and MCP scope documentation. To check the current entry count, read `registry.json` directly -- do not rely on hardcoded counts in documentation.
 
 > **Reference**: `REGISTRY_SCHEMA.md` in this skill folder documents the registry JSON schema. The live registry lives at `Corsox-Tech/claude-tool-registry/registry.json` -- that is the source of truth.
 
@@ -86,7 +86,10 @@ Categorize needs into:
 
 **9. Output checkpoint** -- before proceeding to Step 2b, output a brief summary: how many registry entries matched, which needs are covered, and which needs still have gaps requiring web search. This makes the hard gate verifiable and helps the user see registry value.
 
-**If the registry is not accessible** (repo missing, network error, `gh` not configured), warn the user that the curated registry was unavailable, then proceed to Step 2b. Web search is the fallback -- the skill works without the registry, just less efficiently.
+**Registry failure handling:**
+- **Repo unreachable** (network error, `gh` not configured, rate-limited): Warn the user that the curated registry was unavailable, then proceed to Step 2b. Web search is the fallback -- the skill works without the registry, just less efficiently.
+- **JSON parse failure** (registry.json is malformed or truncated): If registry.json cannot be parsed as a valid JSON array, warn: "Registry JSON is malformed -- skipping registry, using web search only." Do NOT attempt to partially parse or silently return no results. Proceed to Step 2b.
+- **Stale entries**: When filtering, check each entry's `last_verified` date. If older than 6 months, append "(last verified {date} -- may be outdated)" to the recommendation. If older than 12 months, downgrade the entry's effective safety rating by one tier (e.g., `verified` → `community`) and note: "Entry not verified in over a year -- confirm tool still exists before installing."
 
 ---
 
@@ -99,7 +102,7 @@ Search the web **only for needs NOT already covered by registry matches** from S
 There are seven categories of tools Claude can use. Search for ALL that are relevant to the project:
 
 #### Category A: MCP Servers
-Persistent connections that give Claude live access to external platforms.
+Persistent connections that give Claude live access to external platforms. Includes locally-installed MCPs (via `npx`/`uvx`) and remote/cloud-hosted MCPs (accessed via URL — no local install). Also includes first-party OAuth integrations available through Claude Code's built-in auth flow (check `claude.ai` and Anthropic docs for current integrations).
 
 **Searches:**
 1. Search: `site:github.com anthropics MCP server` -- official Anthropic MCP servers
@@ -163,15 +166,15 @@ Standalone SKILL.md files that extend Claude Code's capabilities for specific do
 
 **What to look for**: Skills that automate domain-specific workflows, enforce project conventions, or provide expert guidance for the project's tech stack. Check the skill's line count (must be under 500 lines) and whether it loads supporting files that add context overhead.
 
-#### Category G: Plugins
-Installable packages that bundle skills, hooks, agents, MCP servers, and/or commands into a single distributable unit. Plugins are the primary distribution format for Claude Code extensions.
+#### Category G: Plugins & Agent Frameworks
+Installable packages that bundle skills, hooks, agents, MCP servers, and/or commands into a single distributable unit. Plugins are the primary distribution format for Claude Code extensions. This category also includes agent frameworks and multi-agent orchestration tools (e.g., Claude Agent SDK, custom agent definitions) that extend Claude's ability to delegate or coordinate work.
 
 **Searches:**
 22. Search: `site:github.com claude code plugin [domain]` -- domain-specific plugins
 23. Search: `site:github.com "claude-plugin" OR ".claude-plugin"` -- plugin repos by convention
 24. Fetch: claudecodeplugins.io or similar community plugin directories *(supplementary -- may be stale)*
 
-**What to look for**: Plugins that bundle multiple related capabilities (e.g., a testing plugin with skills + hooks + commands). Check plugin.json for what's included. Prefer plugins over individual skills when the project needs the full bundle.
+**What to look for**: Plugins that bundle multiple related capabilities (e.g., a testing plugin with skills + hooks + commands). Check plugin.json for what's included. Prefer plugins over individual skills when the project needs the full bundle. For agent frameworks, check whether the project needs multi-agent coordination or if single-session Claude is sufficient.
 
 #### General
 25. Search: `site:github.com "awesome-mcp-servers"` -- curated MCP lists (but remember to also check other categories)
@@ -194,13 +197,13 @@ For each discovered tool, evaluate:
 6. **Cost**: Free, freemium, paid? Any API costs?
 7. **Tool type**: MCP server, API, CLI tool, package, Claude Code feature, skill, or plugin?
 8. **Context overhead**: Large plugins/skills can consume significant context window. If a tool's `notes` field warns about context overhead or instability, include that warning in the recommendation. For broad skill bundles, note whether the project actually needs the full bundle or just a subset.
-9. **Context cost estimate**: Estimate the token cost each tool adds to the context window when loaded:
-   - MCP servers: ~200-500 tokens per tool (tool descriptions load lazily, but each registered tool adds its schema)
-   - Skills: ~100 tokens at startup (name + description only), full SKILL.md loads on activation (~1 token per 4 characters)
+9. **Context cost estimate**: Estimate the token cost each tool adds to the context window when loaded. Use the approximation ~1 token per 4 characters (English text with Claude's tokenizer -- users can verify with `anthropic tokenizer` or by checking character count / 4).
+   - MCP servers: ~200-500 tokens **per MCP server** at registration (each server registers its tool schemas into context). Servers with many tools (10+) trend toward the higher end. To estimate more precisely, count the number of tools a server exposes and budget ~30-50 tokens per individual tool.
+   - Skills: ~100 tokens at startup (name + description only), full SKILL.md loads on activation (character count / 4).
    - Plugins: Sum of their bundled skills + hooks. A plugin with 3 skills and 2 hooks might add ~300 tokens at startup, ~2,000+ when active.
    - CLI tools / APIs / packages: ~0 tokens (no context cost -- they run externally)
-   - Existing reference files: estimate ~1 token per 4 characters across all `.claude/` files. Quick proxy by project size: small ~2,000 tokens, medium ~3,500 tokens, large ~5,500 tokens.
-   Track a running total across all recommendations. Quality degrades at ~20% of context window capacity (200K standard = ~40K tokens, 1M Opus = ~200K tokens). Warn if the combined recommendations would push past this threshold when combined with the project's existing reference files.
+   - Existing reference files: character count / 4 across all `.claude/` files. Quick proxy by project size: small ~2,000 tokens, medium ~3,500 tokens, large ~5,500 tokens.
+   Track a running total across all recommendations. Instruction-following quality degrades as loaded instructions approach ~20% of context window capacity (200K standard = ~40K tokens, 1M Opus = ~200K tokens) -- this is an empirical guideline, not a hard cliff. Warn if the combined recommendations would push past this threshold when combined with the project's existing reference files. Present the estimate as approximate: "~{N} tokens (estimate -- actual may vary by ±30%)".
 10. **Compatibility check**: Before recommending, verify:
    - **Node.js version**: If the tool requires a minimum Node version, check against `.nvmrc` or `package.json` engines. If neither exists, note: "Node version requirement unchecked -- no `.nvmrc` or engines field found."
    - **OS**: If the tool is OS-specific (e.g., Linux-only CLI), check against the user's platform. On `win32`, flag tools that require WSL or have no Windows support.
