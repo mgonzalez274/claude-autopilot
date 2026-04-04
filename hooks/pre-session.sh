@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Pre-session hook: checks status.md freshness and audit staleness.
 # Works on Linux (bash) and Windows (Git Bash).
-# On macOS, staleness checks require GNU coreutils (brew install coreutils).
+# On macOS, falls back to BSD date (-j -f) when GNU date (-d) is unavailable.
 # Outputs warnings only -- no output if everything is fine.
 #
 # Note: Claude Code runs hook commands with cwd set to the project root,
