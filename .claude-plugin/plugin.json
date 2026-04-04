@@ -23,8 +23,8 @@
     "contradiction-detection"
   ],
   "skill_versions": {
-    "project-init": "3.0",
-    "project-audit": "3.1",
+    "project-init": "3.1",
+    "project-audit": "3.2",
     "project-plugins": "4.1"
   }
 }

@@ -1,6 +1,6 @@
 # Skill: project-audit
-> Version: 3.1
-> **Skill size note**: This skill is ~295 lines. The length is intentional -- the audit methodology requires comprehensive check definitions and detection procedures. Splitting would fragment the audit flow. The 150-line threshold in CLAUDE.md Rule #7 applies to `.claude/` reference files read during normal development, not to self-contained skill definitions.
+> Version: 3.2
+> **Skill size note**: This skill is ~323 lines. The length is intentional -- the audit methodology requires comprehensive check definitions and detection procedures. Splitting would fragment the audit flow. The 150-line threshold in CLAUDE.md Rule #7 applies to `.claude/` reference files read during normal development, not to self-contained skill definitions.
 
 ## Purpose
 Audit and optimize a Claude-managed project's reference files, structure, and efficiency. Detects bloat, contradictions, stale info, missing docs, context window risks, and organizational issues. Produces actionable recommendations and executes approved changes.
@@ -31,6 +31,29 @@ Read and catalog everything:
 9. **Check status.md for `Last audit` date** -- note how long since last audit
 
 Build an internal inventory before proceeding. Do NOT output findings one file at a time -- complete the full scan first, then report.
+
+### Step 1b: Monorepo Detection
+
+After identifying workstream directories, check if any contain their own `CLAUDE.md` or `.claude/` directory. If found, this is a monorepo with independent scopes.
+
+**Monorepo audit rules:**
+1. Each package directory with its own CLAUDE.md is an **independent audit scope**. Contradictions are only flagged WITHIN a scope, not ACROSS scopes. Two packages using different naming conventions (camelCase vs snake_case) or different deployment targets is intentional, not a contradiction.
+2. The root CLAUDE.md + root `.claude/` is its own scope.
+3. Cross-package checks are limited to: shared credentials, root-level rules that explicitly claim to apply to all packages, and filemap accuracy.
+4. Offer the user a choice: audit one package at a time, or all packages in sequence. Do not merge all packages into a single contradiction check.
+5. When reporting, label each finding with its scope (e.g., `[packages/api]`, `[root]`).
+
+If no package-level CLAUDE.md or `.claude/` directories are found, proceed with the standard single-scope audit.
+
+### Step 1c: Scope Assessment
+
+After inventory, count total `.md` files across the audit scope (`.claude/`, workstream directories, project root):
+
+- **Under 50 .md files**: Proceed with full audit.
+- **50-200 .md files**: Warn the user: "This project has {N} markdown files in scope. A full audit may take several minutes. Options: (a) full audit, (b) audit `.claude/` only, (c) audit `.claude/` + recently changed files (last 2 weeks via `Last updated` headers and `git log`)." Use whichever scope the user selects for project-wide checks (encoding, merge artifacts, stale counts).
+- **Over 200 .md files**: Strongly recommend scoped mode. A full scan of 200+ files risks context exhaustion and diminishing returns.
+
+Record the selected scope -- it applies to all project-wide checks in Step 2 (encoding, merge artifacts, stale count sweeps). `.claude/`-specific checks (structural, nav map, filemap) always run regardless of scope selection.
 
 ### Step 2: Run Checks
 
@@ -85,11 +108,14 @@ Do NOT rely on memory or skimming. Follow these steps:
 3. **Verify specifics against source files**: For each version number, check the actual source file it refers to (e.g., if `status.md` says "project-plugins v2.8", open `skills/project-plugins/SKILL.md` and check the real version). For each entry count, verify against the actual data (e.g., count entries in `registry.json`). For each path reference, verify the path exists on disk. This verification is bidirectional -- also check that version numbers and counts stated WITHIN workstream files match the canonical source (e.g., if `skills/project-plugins/SKILL.md` claims "73+ entries", verify against the actual `registry.json` count).
 4. Use `grep` or search across the FULL project -- `.claude/`, all workstream/audit-scope directories, CLAUDE.md, and any other `.md` files -- for each entity/behavior mentioned. Do NOT limit searches to `.claude/` alone.
 5. **Stale count sweep**: When a verified count is found (e.g., registry has 103 entries), do NOT only check for that number. Grep across the full project for ALL plausible variants -- the correct count, plus previously-known counts and round numbers that might be stale. To find previous counts, check: (a) `status.md` "Recent Changes" or changelog entries, (b) `git log --oneline -10` for commit messages mentioning counts, (c) counts found in other files during step 2 extraction that differ from the verified value. For example, if the verified count is 103, search for "73", "100", "101", "102", "103" in context of "entries", "tools", etc. Any file referencing an outdated count is a stale-info finding.
+   **Context filtering**: For each grep match, verify the match is a CURRENT-STATE claim, not a historical record. Skip these: (a) changelog/history entries ("grew from 73 to 103"), (b) sentences using past tense ("had 73 entries", "was 73"), (c) hypothetical examples ("if you have 100 entries..."), (d) unrelated entities that happen to use the same number ("103 API endpoints" when searching for registry entry counts). Only flag counts presented as current facts ("has 73 entries", "contains 73 tools", "73 items in the registry").
+   **Scope**: Grep `.md` files by default. If the verified count originates from a non-`.md` source (e.g., `registry.json`), also grep file types that might reference it (`.json`, `.yaml`). Do not grep all source files indiscriminately.
 6. **Cross-scope contradiction check**: For each rule or convention found in `.claude/rules/` files, grep CLAUDE.md for the same topic (naming, exports, style, error handling). For each convention in CLAUDE.md's Conventions section, grep `.claude/rules/` files for the same topic. If skills are loaded, check their instructions against both. Flag any case where the same topic has different directives across scopes. The three scope pairs to check:
    - CLAUDE.md rules vs `.claude/rules/` file conventions (e.g., CLAUDE.md says "use default exports" but rules/coding.md says "use named exports")
    - `.claude/rules/` files vs each other (e.g., coding.md says "camelCase" but a domain-specific rules file says "snake_case")
    - CLAUDE.md/rules/ vs loaded skills (if skills contain conventions that conflict with project rules)
-7. Flag any case where the same entity, behavior, or rule is described differently in two or more files
+   **Monorepo scoping**: If Step 1b identified independent audit scopes, only cross-check files within the same scope. Two packages with different conventions is intentional. Only flag cross-package contradictions when a root-level rule explicitly claims to apply to all packages (e.g., root CLAUDE.md says "all packages use camelCase" but packages/api rules say "snake_case").
+7. Flag any case where the same entity, behavior, or rule is described differently in two or more files **within the same audit scope**
 8. **Assign severity** to each contradiction:
    - **Blocking**: Will cause incorrect behavior or failures (e.g., conflicting deployment targets, wrong API endpoints, contradictory permission rules)
    - **Degrading**: Will reduce instruction compliance or cause inconsistent output (e.g., conflicting style conventions, different naming patterns)

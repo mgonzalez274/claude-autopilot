@@ -1,7 +1,7 @@
 # Skill: project-init
-> Version: 3.0
+> Version: 3.1
 
-> **Skill size note**: This skill is ~415 lines plus a separate TEMPLATES.md file. For small projects, the Phase 3 file selection matrix will skip most files -- don't let the length of this skill suggest the output will be equally complex. A small project may only get CLAUDE.md + status.md + filemap.md.
+> **Skill size note**: This skill is ~438 lines plus a separate TEMPLATES.md file. For small projects, the Phase 3 file selection matrix will skip most files -- don't let the length of this skill suggest the output will be equally complex. A small project may only get CLAUDE.md + status.md + filemap.md.
 
 ## Purpose
 Scaffold a new Claude-managed project or restructure an existing one. This skill interviews the user, determines the optimal project structure, creates all reference files with proper content, writes a lean "router-style" CLAUDE.md, and suggests plugins/skills/integrations.
@@ -95,7 +95,7 @@ Present the suggestion; user has final say.
 
 If the user is running init on an existing project (not new from scratch), scan before determining structure:
 
-1. **Check for `.claude/.init-manifest`** -- if it exists, this project was previously initialized by this skill. Offer a **re-init flow**: use the manifest to distinguish files init created vs. files the user created independently. Present options: (a) re-init from scratch (backup and replace init-created files), (b) update only (refresh templates while preserving user content), (c) cancel.
+1. **Check for `.claude/.init-manifest`** -- if it exists, this project was previously initialized by this skill. Validate the manifest against disk and offer a re-init flow (see below).
 2. **Read the current CLAUDE.md** (if any) -- note line count, content, rules, paths
 3. **Check for existing reference files** -- any .claude/ folder, readme, status files, knowledge base docs, etc.
 4. **List all existing files in .claude/** that would be affected by restructuring
@@ -103,6 +103,29 @@ If the user is running init on an existing project (not new from scratch), scan 
 6. **Identify content to preserve** -- don't lose any existing instructions, rules, or knowledge
 
 Feed all findings into Phase 3 (Structure Determination). Do NOT create, modify, or delete any files in this phase.
+
+### Manifest Validation & Re-init Flow
+
+When `.init-manifest` exists, validate each entry against disk before offering options:
+
+| Manifest entry | On disk? | Category |
+|---|---|---|
+| Listed + exists | Yes | Available for backup/update |
+| Listed + missing | No | Previously created, manually deleted |
+| Not listed + exists in .claude/ | Yes | User-created, will not be touched |
+
+Report the validation: "Init manifest lists {N} files. {X} still exist, {Y} were manually deleted since init, {Z} new files were created independently."
+
+Then present re-init options:
+- **(a) Re-init from scratch**: Backup all existing init-created files (skip backup for files that were manually deleted -- they don't need backing up), run discovery interview fresh, generate all files anew.
+- **(b) Update only**: For each file in the manifest that still exists, compare the current content against what the template would generate from the CURRENT discovery answers (re-ask the interview or reuse answers if the user confirms they haven't changed). Apply these merge rules:
+  - **File unchanged from original template**: Replace silently.
+  - **File modified by the user** (content differs from what the template would have generated): Show the diff. Ask the user per-file: replace, keep current, or merge specific sections.
+  - **File deleted by the user**: Ask whether to recreate it.
+  - **Files not in manifest** (user-created): Never touch.
+- **(c) Cancel**: Exit without changes.
+
+**Quick exit**: After validation, if the existing structure and content match what Phase 3 would generate (same file set, same discovery answers), report: "Current setup matches what init would generate. No changes needed." Offer to re-run discovery if the user wants different answers.
 
 ---
 
@@ -375,10 +398,11 @@ After setup is complete:
 If the user says "undo init", "rollback", or indicates the setup went wrong:
 
 1. **Read `.claude/.init-manifest`** to get the list of files init created.
-2. **For new projects**: Delete only the files listed in the manifest. List what was deleted for confirmation.
-3. **For existing projects**: Restore all `.backup` files to their original names, then delete files listed in the manifest that don't have a corresponding backup. This ensures pre-existing `.claude/settings.json`, `.claude/skills/`, etc. are never touched.
-4. Delete the `.init-manifest` itself.
-5. Ask the user if they want to re-run init with different answers.
+2. **Validate manifest against disk**: Check which listed files still exist. Report: "Manifest lists {N} files. {X} still exist, {Y} were already deleted."
+3. **For new projects**: Delete only the manifest files that still exist on disk. Skip entries for files that were already manually deleted. Report accurately: "Deleted {X} files. {Y} manifest entries were already missing (skipped)."
+4. **For existing projects**: Restore all `.backup` files to their original names, then delete manifest files that still exist and don't have a corresponding backup. Skip entries for files that were already manually deleted (no backup to restore, nothing to delete). This ensures pre-existing `.claude/settings.json`, `.claude/skills/`, etc. are never touched.
+5. Delete the `.init-manifest` itself.
+6. Ask the user if they want to re-run init with different answers.
 
 If `.init-manifest` doesn't exist (e.g., init was run before this feature), fall back to asking the user which files to remove rather than guessing.
 
