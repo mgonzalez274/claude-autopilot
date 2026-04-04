@@ -9,7 +9,8 @@
 INPUT=$(cat)
 
 # CRITICAL: Always allow stop if we already blocked once (prevents infinite loops)
-ACTIVE=$(echo "$INPUT" | grep -o '"stop_hook_active"[[:space:]]*:[[:space:]]*true' || true)
+# Use printf instead of echo -- echo can misinterpret leading dashes as flags
+ACTIVE=$(printf '%s\n' "$INPUT" | grep -o '"stop_hook_active"[[:space:]]*:[[:space:]]*true' || true)
 if [ -n "$ACTIVE" ]; then
   exit 0
 fi

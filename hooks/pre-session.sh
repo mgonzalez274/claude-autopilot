@@ -19,12 +19,14 @@ last_updated=$(grep -m1 'Last updated:' "$STATUS_FILE" | sed 's/.*Last updated:[
 if [ -n "$last_updated" ]; then
   # Calculate days since last update (portable: GNU date, macOS date, Git Bash)
   now=$(date +%s)
-  then=$(date -d "$last_updated" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$last_updated" +%s 2>/dev/null)
-  if [ -n "$then" ]; then
-    days_stale=$(( (now - then) / 86400 ))
+  updated_ts=$(date -d "$last_updated" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$last_updated" +%s 2>/dev/null)
+  if [ -n "$updated_ts" ]; then
+    days_stale=$(( (now - updated_ts) / 86400 ))
     if [ "$days_stale" -gt 14 ]; then
       echo "[autopilot] status.md is ${days_stale} days old. Consider updating it."
     fi
+  else
+    echo "[autopilot] Could not parse 'Last updated' date '${last_updated}'. Use YYYY-MM-DD format."
   fi
 fi
 
@@ -35,11 +37,13 @@ if [ "$last_audit" = "never" ]; then
   echo "[autopilot] No audit recorded. Consider running project-audit."
 elif [ -n "$last_audit" ]; then
   now=$(date +%s)
-  audit_then=$(date -d "$last_audit" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$last_audit" +%s 2>/dev/null)
-  if [ -n "$audit_then" ]; then
-    audit_days=$(( (now - audit_then) / 86400 ))
+  audit_ts=$(date -d "$last_audit" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$last_audit" +%s 2>/dev/null)
+  if [ -n "$audit_ts" ]; then
+    audit_days=$(( (now - audit_ts) / 86400 ))
     if [ "$audit_days" -gt 30 ]; then
       echo "[autopilot] Last audit was ${audit_days} days ago. Consider running project-audit."
     fi
+  else
+    echo "[autopilot] Could not parse 'Last audit' date '${last_audit}'. Use YYYY-MM-DD format."
   fi
 fi
