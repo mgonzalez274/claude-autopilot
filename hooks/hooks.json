@@ -16,8 +16,9 @@
       {
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "Before ending this session, update .claude/status.md with a brief summary: what was done, what's next, any blockers. Set 'Last updated' to today's date. If task statuses changed, update .claude/tasks.md. If new files or directories were created, update .claude/filemap.md."
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-session.sh",
+            "timeout": 5
           }
         ]
       }

@@ -17,9 +17,9 @@ fi
 last_updated=$(grep -m1 'Last updated:' "$STATUS_FILE" | sed 's/.*Last updated:[[:space:]]*//' | tr -d '\r')
 
 if [ -n "$last_updated" ]; then
-  # Calculate days since last update (portable: works in GNU date and Git Bash)
+  # Calculate days since last update (portable: GNU date, macOS date, Git Bash)
   now=$(date +%s)
-  then=$(date -d "$last_updated" +%s 2>/dev/null)
+  then=$(date -d "$last_updated" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$last_updated" +%s 2>/dev/null)
   if [ -n "$then" ]; then
     days_stale=$(( (now - then) / 86400 ))
     if [ "$days_stale" -gt 14 ]; then
@@ -35,7 +35,7 @@ if [ "$last_audit" = "never" ]; then
   echo "[autopilot] No audit recorded. Consider running project-audit."
 elif [ -n "$last_audit" ]; then
   now=$(date +%s)
-  audit_then=$(date -d "$last_audit" +%s 2>/dev/null)
+  audit_then=$(date -d "$last_audit" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$last_audit" +%s 2>/dev/null)
   if [ -n "$audit_then" ]; then
     audit_days=$(( (now - audit_then) / 86400 ))
     if [ "$audit_days" -gt 30 ]; then
