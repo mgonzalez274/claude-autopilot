@@ -13,6 +13,10 @@ if [ ! -f "$STATUS_FILE" ]; then
   exit 0
 fi
 
+# Record session start time so stop-session can detect changes made during this session
+mkdir -p .claude
+touch .claude/.session-start
+
 # Extract "Last updated" date from status.md
 last_updated=$(grep -m1 'Last updated:' "$STATUS_FILE" | sed 's/.*Last updated:[[:space:]]*//' | tr -d '\r')
 
